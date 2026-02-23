@@ -3,3 +3,5 @@
 knowledge/**/*.json
 knowledge/corrupt_learning/
 knowledge/learning_data_*.json
+__pycache__/
+*.pyc
