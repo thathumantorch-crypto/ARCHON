@@ -1,0 +1,151 @@
+2026-02-22 10:22:33,530 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:22:33,532 - ARCHON - ERROR - Error processing message: type object 'ConversationIntent' has no attribute 'PROCESS_OPERATION'
+2026-02-22 10:23:00,180 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:23:00,182 - ARCHON - ERROR - Error processing message: type object 'ConversationIntent' has no attribute 'PROCESS_CONTROL'
+2026-02-22 10:23:00,194 - ARCHON - ERROR - Error processing message: type object 'ConversationIntent' has no attribute 'PROCESS_CONTROL'
+2026-02-22 10:23:00,194 - ARCHON - ERROR - Error processing message: type object 'ConversationIntent' has no attribute 'PROCESS_CONTROL'
+2026-02-22 10:23:00,194 - ARCHON - ERROR - Error processing message: type object 'ConversationIntent' has no attribute 'PROCESS_CONTROL'
+2026-02-22 10:23:20,276 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:24:15,083 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:25:31,090 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:25:47,273 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:26:13,462 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:26:41,572 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:27:07,724 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:27:17,080 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:27:17,085 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:27:31,505 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:27:31,508 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:27:31,684 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:27:31,686 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:27:31,861 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:27:31,864 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:28:38,486 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:28:38,489 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:28:41,314 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:28:41,317 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:28:46,072 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:28:46,074 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:28:50,108 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:28:50,111 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:28:54,279 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:28:54,282 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:29:14,784 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:29:38,005 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:29:38,007 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:29:38,200 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:29:38,223 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:32:14,549 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:32:29,419 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:32:51,482 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:33:14,201 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:33:14,204 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:33:14,395 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:33:14,399 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:33:30,377 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:33:30,380 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:33:30,561 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:33:30,565 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:33:36,073 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:33:36,076 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:33:45,177 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:33:45,181 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:33:46,505 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:33:46,508 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:33:47,569 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:33:47,572 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:33:48,609 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:33:48,612 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:34:57,462 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:35:06,830 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:35:06,834 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:35:15,049 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:35:15,052 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:35:26,387 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:35:26,391 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:36:38,878 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:37:13,856 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:37:37,895 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:38:21,391 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:38:21,394 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:38:27,788 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:38:27,790 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:38:39,849 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:39:13,192 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:39:45,657 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:40:05,507 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:40:30,263 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:40:30,268 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:40:30,429 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:40:30,434 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:40:30,620 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:40:30,637 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:41:55,898 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:42:16,394 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:42:31,047 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:42:31,051 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:42:31,222 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:42:31,225 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:42:31,426 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:42:31,446 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:42:43,664 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:44:53,531 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:44:53,535 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:44:57,492 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:44:57,495 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:45:14,747 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:45:14,751 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:49:52,210 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:49:52,211 - ARCHON - ERROR - Error processing message: cannot access local variable 'enhanced_analysis' where it is not associated with a value
+2026-02-22 10:50:16,130 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:50:16,132 - ARCHON - ERROR - Error processing message: ArchonAI._handle_help_request() takes 3 positional arguments but 4 were given
+2026-02-22 10:51:04,853 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:51:22,198 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:52:37,265 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:52:37,268 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:52:50,922 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:52:50,926 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:53:03,173 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:53:03,176 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:53:03,365 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:53:03,368 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:53:03,561 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:53:03,564 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:53:03,753 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 10:53:03,757 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:55:58,438 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:55:58,439 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 10:56:19,074 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:56:19,075 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 10:56:36,426 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:56:36,428 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 10:56:51,644 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:56:51,646 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 10:57:12,211 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:57:12,213 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 10:57:33,904 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:57:33,905 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 10:59:01,972 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:59:01,974 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 10:59:18,666 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:59:18,668 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 10:59:45,780 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 10:59:45,783 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 11:00:17,519 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 11:00:17,521 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 11:01:43,222 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 11:01:43,223 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 11:03:03,817 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 11:03:03,819 - ARCHON - ERROR - Error processing message: 'confidence'
+2026-02-22 11:26:21,367 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 11:26:21,373 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 11:26:21,626 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 11:26:21,629 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 11:28:07,240 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 11:28:07,243 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 11:28:14,488 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 11:28:14,491 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 11:28:14,651 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 11:28:14,661 - ARCHON - INFO - ARCHON AI system initialized
+2026-02-22 11:28:14,869 - ARCHON - INFO - ARCHON core initialized
+2026-02-22 11:28:14,872 - ARCHON - INFO - ARCHON AI system initialized

@@ -1,0 +1,29 @@
+2026-02-22 13:27:20,951 - INFO - ============================================================
+2026-02-22 13:27:20,952 - INFO - ARCHON SYSTEM DIAGNOSTIC AND FIX
+2026-02-22 13:27:20,952 - INFO - ============================================================
+2026-02-22 13:27:20,952 - INFO - Checking dependencies...
+2026-02-22 13:27:26,046 - ERROR - Missing packages: ['speechrecognition']
+2026-02-22 13:27:26,047 - INFO - Installing missing packages...
+2026-02-22 13:27:26,976 - INFO - Checking ARCHON components...
+2026-02-22 13:27:28,839 - INFO - Imported existing <module 'comtypes.gen' from 'C:\\Users\\thath\\AppData\\Roaming\\Python\\Python314\\site-packages\\comtypes\\gen\\__init__.py'>
+2026-02-22 13:27:28,851 - INFO - Using writeable comtypes cache directory: 'C:\Users\thath\AppData\Roaming\Python\Python314\site-packages\comtypes\gen'
+2026-02-22 13:27:29,245 - INFO - ARCHON core initialized
+2026-02-22 13:27:29,643 - INFO - HTTP Request: HEAD https://huggingface.co/distilgpt2/resolve/main/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-02-22 13:27:29,643 - WARNING - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-02-22 13:27:29,731 - INFO - HTTP Request: GET https://huggingface.co/api/models/distilgpt2/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 307 Temporary Redirect"
+2026-02-22 13:27:29,870 - INFO - HTTP Request: GET https://huggingface.co/api/models/distilbert/distilgpt2/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-02-22 13:27:29,993 - INFO - HTTP Request: GET https://huggingface.co/api/models/distilgpt2/tree/main?recursive=true&expand=false "HTTP/1.1 307 Temporary Redirect"
+2026-02-22 13:27:30,085 - INFO - HTTP Request: GET https://huggingface.co/api/models/distilbert/distilgpt2/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-02-22 13:27:30,429 - INFO - HTTP Request: HEAD https://huggingface.co/distilgpt2/resolve/main/config.json "HTTP/1.1 200 OK"
+2026-02-22 13:27:30,530 - INFO - HTTP Request: HEAD https://huggingface.co/distilgpt2/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-02-22 13:27:30,679 - INFO - HTTP Request: HEAD https://huggingface.co/distilgpt2/resolve/main/generation_config.json "HTTP/1.1 200 OK"
+2026-02-22 13:27:30,682 - INFO - Loaded distilgpt2 successfully
+2026-02-22 13:27:41,360 - ERROR - Failed to connect to Milvus: <MilvusException: (code=2, message=Fail connecting to server on localhost:19530, illegal connection params or server unavailable)>
+2026-02-22 13:27:41,361 - INFO - Using fallback knowledgebase (in-memory storage)
+2026-02-22 13:27:41,362 - INFO - ARCHON AI system initialized
+2026-02-22 13:27:44,953 - INFO - Found 3 knowledge items for query: Hello, test message...
+2026-02-22 13:27:44,954 - INFO - Checking web interface...
+2026-02-22 13:27:45,010 - INFO - Fixing common issues...
+2026-02-22 13:27:45,026 - INFO - Restarting web interface...
+2026-02-22 13:27:45,095 - INFO - ============================================================
+2026-02-22 13:27:45,098 - INFO - ============================================================

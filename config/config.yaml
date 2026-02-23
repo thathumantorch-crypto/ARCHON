@@ -1,0 +1,152 @@
+# Configuration file for Conversational AI System
+
+# Model Configuration
+model:
+  vocab_size: 50000
+  hidden_size: 768
+  num_layers: 12
+  num_heads: 12
+  max_seq_len: 512
+  device: "auto"  # auto, cpu, cuda
+  model_path: "models/conversational_ai.pt"
+  voice_enabled: false
+  computer_interaction_enabled: true
+
+# Training Configuration
+training:
+  learning_rate: 0.0001
+  batch_size: 16
+  num_epochs: 50
+  warmup_steps: 1000
+  max_grad_norm: 1.0
+  weight_decay: 0.01
+  adam_epsilon: 0.00000001
+  save_steps: 500
+  eval_steps: 100
+  logging_steps: 10
+  mixed_precision: true
+  gradient_accumulation_steps: 1
+  early_stopping_patience: 5
+  use_wandb: false
+
+# Data Configuration
+data:
+  data_dir: "data"
+  processed_dir: "data/processed"
+  models_dir: "models"
+  synthetic_ratio: 0.7
+  test_size: 0.2
+  val_size: 0.1
+  max_examples_per_type: 10000
+
+# Voice Configuration
+voice:
+  enabled: false
+  tts:
+    rate: 200
+    volume: 0.9
+    voice_id: null
+    gender: "neutral"
+  stt:
+    engine: "google"  # google, whisper, sphinx, bing, azure
+    sample_rate: 16000
+    chunk_size: 1024
+    channels: 1
+    energy_threshold: 300.0
+    pause_threshold: 0.8
+    operation_timeout: 5.0
+    phrase_timeout: 3.0
+  audio:
+    sample_rate: 16000
+    bit_depth: 16
+    channels: 1
+    buffer_size: 1024
+    noise_reduction_strength: 0.5
+    normalize_audio: true
+    trim_silence: true
+    silence_threshold: 0.01
+
+# Computer Interaction Configuration
+computer:
+  file_manager:
+    base_directory: "."
+    max_file_size: 10485760  # 10MB
+    include_hidden: false
+  process_manager:
+    refresh_interval: 5.0
+    max_processes: 1000
+    auto_refresh: false
+  system_controller:
+    enable_shutdown: true
+    enable_restart: true
+    enable_sleep: true
+    enable_lock: true
+    require_confirmation: true
+
+# Web Interface Configuration
+web:
+  host: "127.0.0.1"
+  port: 8501
+  debug: false
+  auto_refresh: true
+  max_conversation_history: 100
+  theme: "light"
+
+# API Configuration
+api:
+  host: "127.0.0.1"
+  port: 8000
+  reload: false
+  log_level: "info"
+  cors_origins: ["*"]
+  max_request_size: 1048576  # 1MB
+  rate_limit: 100  # requests per minute
+
+# CLI Configuration
+cli:
+  voice_enabled: false
+  auto_save_history: true
+  history_file: "conversation_history.json"
+  max_history_entries: 1000
+  prompt_style: "default"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/ai_system.log"
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
+  console_output: true
+
+# Security Configuration
+security:
+  enable_authentication: false
+  api_key_required: false
+  allowed_operations:
+    - "file_read"
+    - "file_write"
+    - "file_list"
+    - "process_list"
+    - "system_info"
+  blocked_operations:
+    - "system_shutdown"
+    - "system_restart"
+    - "process_kill_admin"
+
+# Performance Configuration
+performance:
+  max_concurrent_requests: 10
+  request_timeout: 30.0
+  response_timeout: 60.0
+  cache_enabled: true
+  cache_size: 1000
+  cache_ttl: 3600  # 1 hour
+
+# Development Configuration
+development:
+  debug_mode: false
+  verbose_logging: false
+  mock_external_services: false
+  test_data_mode: false
+  profiling_enabled: false
