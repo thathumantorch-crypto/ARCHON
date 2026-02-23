@@ -9,6 +9,7 @@ import threading
 from typing import Dict, List, Any, Optional
 import sys
 import os
+from pathlib import Path
 from datetime import datetime
 
 # Add parent directory to path for imports
@@ -423,6 +424,38 @@ class EnhancedWebInterface:
                 else:
                     st.error(result.get('message', 'Unable to run AI creation learning.'))
 
+        st.subheader("* Supabase Masterclass")
+        if st.button("Run Supabase Masterclass", help="Pull deep conversational + senior Python lessons from the Supabase mentor API and ingest into ARCHON."):
+            if not self.archon_ai:
+                st.error("ARCHON AI is unavailable right now.")
+            else:
+                with st.spinner("Pulling Supabase mentor lessons (conversation + senior Python mastery)..."):
+                    result = self.archon_ai.run_supabase_masterclass()
+                if result.get('success'):
+                    lessons = result.get('lessons_processed', 0)
+                    topics = result.get('topics') or []
+                    st.success(f"Processed {lessons} Supabase lessons across {len(topics)} topics.")
+                    learning_session = result.get('learning_session') or {}
+                    st.caption(
+                        f"Learning session #{learning_session.get('session_id', 'N/A')} — "
+                        f"patterns: {learning_session.get('patterns_learned', 0)}, "
+                        f"templates: {learning_session.get('templates_learned', 0)}, "
+                        f"tech knowledge: {learning_session.get('technical_knowledge_added', 0)}."
+                    )
+                    kb_result = result.get('knowledgebase_ingest')
+                    if kb_result:
+                        st.caption(
+                            f"Knowledgebase ingest: {kb_result.get('items_ingested', 0)} / {kb_result.get('items_attempted', 0)} entries persisted."
+                        )
+                    summaries = result.get('lesson_summaries') or []
+                    if summaries:
+                        with st.expander("Lesson summaries", expanded=False):
+                            for lesson in summaries:
+                                st.markdown(f"**{lesson.get('topic')}**")
+                                st.write(lesson.get('summary'))
+                else:
+                    st.error(result.get('message', 'Supabase learning failed.'))
+
         # Moltbook integration
         st.subheader("* Moltbook Integration")
         if self.archon_ai:
@@ -501,6 +534,34 @@ class EnhancedWebInterface:
             st.write("**Model Knowledge:**")
             st.json(model_status)
 
+        st.markdown("---")
+        st.subheader("* Node Dependency Intelligence")
+        node_projects = []
+        if self.archon_ai:
+            try:
+                node_projects = self.archon_ai.get_node_projects()
+            except Exception as exc:
+                st.error(f"Unable to enumerate Node projects: {exc}")
+
+        if node_projects:
+            st.caption("Detected package.json projects that ARCHON can learn from:")
+            st.table(pd.DataFrame(node_projects))
+        else:
+            st.info("No Node/NPX projects detected yet.")
+
+        ingest_disabled = not node_projects
+        if st.button("Learn from Node dependencies", disabled=ingest_disabled, help="Parse package.json files, gather metadata, and ingest the dependency graph into ARCHON's technical knowledge."):
+            if self.archon_ai:
+                with st.spinner("Analyzing dependencies and ingesting metadata..."):
+                    result = self.archon_ai.learn_node_dependencies([proj['path'] for proj in node_projects])
+                if result.get('success'):
+                    learned = result.get('dependencies_learned', 0)
+                    st.success(f"Learned {learned} dependency knowledge topics. Sessions recorded: {result.get('session_id', 'n/a')}.")
+                    if result.get('missing_metadata'):
+                        st.info("Metadata pulled from npm registry for: " + ", ".join(result['missing_metadata'][:10]))
+                else:
+                    st.error(result.get('message', 'Failed to ingest dependency knowledge.'))
+
     def render_learning_overview(self):
         st.title("* Learned - ARCHON Knowledge Digest")
         if not self.archon_ai:
@@ -546,6 +607,53 @@ class EnhancedWebInterface:
 
         if len(entries) > 25:
             st.caption(f"Showing 25 of {len(entries)} entries. Use knowledge tools to export the rest.")
+
+    def render_marketing_section(self):
+        st.title("* Marketing Showcase")
+        if not self.archon_ai:
+            st.error("ARCHON AI unavailable. Initialize it from another page first.")
+            return
+
+        with st.spinner("Checking marketing showcase status..."):
+            status = self.archon_ai.get_marketing_showcase_status()
+
+        cols = st.columns(3)
+        with cols[0]:
+            st.metric("Video available", "Yes" if status.get('exists') else "No")
+        with cols[1]:
+            size_bytes = status.get('size_bytes') or 0
+            size_mb = f"{size_bytes / (1024 * 1024):.2f} MB" if size_bytes else "0"
+            st.metric("File size", size_mb)
+        with cols[2]:
+            st.metric("Last updated", status.get('last_modified') or "n/a")
+
+        video_path = status.get('path')
+        if status.get('exists') and video_path:
+            try:
+                with open(video_path, 'rb') as video_file:
+                    st.video(video_file.read())
+            except FileNotFoundError:
+                st.warning("Showcase file was reported but not found on disk. Re-render to regenerate it.")
+        else:
+            st.info("No showcase video has been rendered yet.")
+
+        if st.button("Render latest showcase", help="Invoke Remotion via npx to regenerate the marketing video."):
+            with st.spinner("Rendering ARCHON marketing showcase..."):
+                result = self.archon_ai.render_marketing_showcase()
+            if result.get('success'):
+                st.success("Marketing video rendered successfully.")
+                new_status = result
+                log = result.get('log')
+                if log:
+                    with st.expander("Render log"):
+                        st.code(log)
+                st.caption(f"Stored at {new_status.get('path')}")
+                st.rerun()
+            else:
+                st.error(result.get('message', 'Render failed.'))
+                if result.get('log'):
+                    with st.expander("Render log"):
+                        st.code(result['log'])
     
     def run(self):
         """Main run method"""
@@ -559,7 +667,7 @@ class EnhancedWebInterface:
         # Sidebar navigation
         page = st.sidebar.selectbox(
             label="Select Page",
-            options=["* Chat", "* File Manager", "* Process Manager", "* System Monitor", "* Learned", "* Settings"],
+            options=["* Chat", "* File Manager", "* Process Manager", "* System Monitor", "* Learned", "* Marketing", "* Settings"],
             key="main_navigation",
             help="Navigate to different sections of the ARCHON interface"
         )
@@ -580,6 +688,8 @@ class EnhancedWebInterface:
             self.render_system_monitor()
         elif page == "* Learned":
             self.render_learning_overview()
+        elif page == "* Marketing":
+            self.render_marketing_section()
         elif page == "* Settings":
             self.render_settings()
 

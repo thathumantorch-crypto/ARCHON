@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "netlify": "^23.15.1"
+  }
+}

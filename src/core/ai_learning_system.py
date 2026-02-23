@@ -15,6 +15,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -94,6 +95,7 @@ class AILearningSystem:
                         
                     except Exception as e:
                         logger.error(f"Error loading learning data from {file}: {e}")
+                        self._quarantine_corrupt_file(filepath)
                         
         except Exception as e:
             logger.error(f"Error loading learning data: {e}")
@@ -126,8 +128,8 @@ class AILearningSystem:
             learning_session['templates_learned'] = len(templates_learned)
             
             # Learn technical knowledge
-            tech_knowledge = self._learn_technical_knowledge(learning_results.get('technical_knowledge', {}))
-            learning_session['technical_knowledge_added'] = len(tech_knowledge)
+            tech_knowledge_count = self._learn_technical_knowledge(learning_results.get('technical_knowledge', {}))
+            learning_session['technical_knowledge_added'] = tech_knowledge_count
             
             # Update performance metrics
             self.performance_metrics['total_patterns_learned'] += learning_session['patterns_learned']
@@ -162,7 +164,8 @@ class AILearningSystem:
         """Learn conversation patterns from scraped data"""
         learned = []
 
-        for pattern, sources in patterns.items():
+        for raw_pattern, sources in patterns.items():
+            pattern = self._trim_text(raw_pattern)
             source_entries = self._ensure_sequence(sources)
             if source_entries:
                 # Calculate confidence based on source relevance
@@ -188,7 +191,8 @@ class AILearningSystem:
         """Learn response templates from scraped data"""
         learned = []
 
-        for template, sources in templates.items():
+        for raw_template, sources in templates.items():
+            template = self._trim_text(raw_template)
             source_entries = self._ensure_sequence(sources)
             if source_entries:
                 # Determine intent from template content
@@ -222,20 +226,21 @@ class AILearningSystem:
         learned_count = 0
 
         for topic, info_list in knowledge.items():
+            normalized_topic = self._normalize_topic(topic)
             entries = self._ensure_sequence(info_list)
-            if topic not in self.technical_knowledge:
-                self.technical_knowledge[topic] = []
+            if normalized_topic not in self.technical_knowledge:
+                self.technical_knowledge[normalized_topic] = []
 
             for info in entries:
                 knowledge_item = {
-                    'info': info.get('info', ''),
+                    'info': self._trim_text(info.get('info', '')),
                     'source': info.get('source', 'unknown'),
                     'relevance': info.get('relevance', 0.5),
                     'timestamp': info.get('timestamp', datetime.now()),
                     'usage_count': 0
                 }
                 
-                self.technical_knowledge[topic].append(knowledge_item)
+                self.technical_knowledge[normalized_topic].append(knowledge_item)
                 learned_count += 1
         
         return learned_count
@@ -373,7 +378,36 @@ class AILearningSystem:
             
         except Exception as e:
             logger.error(f"Error updating effectiveness scores: {e}")
-    
+
+    def _trim_text(self, text: str, max_length: int = 800) -> str:
+        if not text:
+            return ''
+        cleaned = " ".join(str(text).split())
+        if len(cleaned) <= max_length:
+            return cleaned
+        return cleaned[: max_length - 3] + '...'
+
+    def _normalize_topic(self, topic: Any, fallback: str = 'general') -> str:
+        if not isinstance(topic, str):
+            return fallback
+        normalized = self._trim_text(topic, max_length=160)
+        return normalized or fallback
+
+    def _quarantine_corrupt_file(self, filepath: str) -> None:
+        try:
+            if not filepath:
+                return
+            knowledge_dir = os.path.dirname(filepath)
+            quarantine_dir = os.path.join(knowledge_dir, 'corrupt_learning')
+            os.makedirs(quarantine_dir, exist_ok=True)
+            filename = os.path.basename(filepath)
+            target_path = os.path.join(quarantine_dir, filename)
+            if os.path.exists(filepath):
+                os.replace(filepath, target_path)
+                logger.warning(f"Moved corrupt learning file to {target_path}")
+        except Exception as exc:
+            logger.error(f"Failed to quarantine corrupt learning file {filepath}: {exc}")
+
     def _save_learning_data(self):
         """Save learning data to file"""
         try:
@@ -398,7 +432,7 @@ class AILearningSystem:
             learning_data = {
                 'learned_patterns': [convert_datetime(asdict(p)) for p in self.learned_patterns],
                 'response_templates': [convert_datetime(asdict(t)) for t in self.response_templates],
-                'technical_knowledge': self.technical_knowledge,
+                'technical_knowledge': convert_datetime(self.technical_knowledge),
                 'performance_metrics': convert_datetime(self.performance_metrics),
                 'learning_history': convert_datetime(self.learning_history),
                 'saved_timestamp': datetime.now().isoformat()

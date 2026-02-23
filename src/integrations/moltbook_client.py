@@ -176,6 +176,21 @@ class MoltbookClient:
         resp.raise_for_status()
         return resp.json()
 
+    def like_post(self, post_id: str) -> Dict[str, Any]:
+        if not self.credentials.api_key:
+            raise RuntimeError("Moltbook API key not available. Register first.")
+        headers = {"Authorization": f"Bearer {self.credentials.api_key}"}
+        resp = self.session.post(
+            f"{self.BASE_URL}/posts/{post_id}/like",
+            headers=headers,
+            timeout=20,
+        )
+        if not resp.ok:
+            detail = self._extract_error_detail(resp)
+            raise requests.HTTPError(f"Moltbook like failed: {resp.status_code} {detail}", response=resp)
+        resp.raise_for_status()
+        return resp.json()
+
     def _extract_error_detail(self, response: requests.Response) -> str:
         try:
             data = response.json()

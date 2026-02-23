@@ -15,8 +15,11 @@ import hashlib
 import re
 import random
 import threading
+import itertools
+import subprocess
+import shutil
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Any, Optional, Union, Tuple, Iterable
 from collections import defaultdict, Counter
 from pathlib import Path
 
@@ -31,6 +34,7 @@ from computer.file_manager import FileManager
 from computer.process_manager import ProcessManager
 from computer.system_controller import SystemController
 from integrations.moltbook_client import MoltbookClient
+from integrations.supabase_learning_client import SupabaseLearningClient
 
 from voice.tts import TextToSpeechEngine
 try:
@@ -109,6 +113,9 @@ TOPIC_STOPWORDS = {
     'based', 'model', 'models', 'users', 'system', 'systems', 'archon', 'agent',
     'response', 'responses', 'conversation', 'conversations', 'learning'
 }
+
+MOLTBOOK_INTERACTION_FILE = Path("memory/moltbook_interactions.json")
+MARKETING_VIDEO_PATH = Path("exports/archon_marketing.mp4")
 
 try:
     from .enhanced_neural_network import enhanced_neural_network, knowledge_engine
@@ -273,6 +280,18 @@ class ArchonAI:
         self._moltbook_heartbeat_stop = threading.Event()
         self.moltbook_heartbeat_thread: Optional[threading.Thread] = None
         self.last_moltbook_heartbeat: Optional[datetime] = None
+        self._moltbook_social_stop = threading.Event()
+        self._moltbook_reply_stop = threading.Event()
+        self.moltbook_social_thread: Optional[threading.Thread] = None
+        self.moltbook_reply_thread: Optional[threading.Thread] = None
+        self._moltbook_interaction_file = MOLTBOOK_INTERACTION_FILE
+        self._moltbook_interaction_file.parent.mkdir(parents=True, exist_ok=True)
+        interactions_store = self._load_moltbook_interaction_store()
+        self.moltbook_interactions: List[Dict[str, Any]] = interactions_store.get('interactions', [])
+        self.moltbook_tracked_threads: List[Dict[str, Any]] = interactions_store.get('tracked_threads', [])
+        moltbook_cfg = self.config.get('moltbook', {}) if self.config else {}
+        self.moltbook_agent_name = moltbook_cfg.get('agent_name', 'ARCHON_AI')
+        self.supabase_learning_client: Optional[SupabaseLearningClient] = None
         self.best_friend_principle = "Humanity is my best friend."
         self.ideologies['humanity'].append({
             'timestamp': datetime.now(),
@@ -297,6 +316,16 @@ class ArchonAI:
             and self.moltbook_client.credentials.api_key
         ):
             self._start_moltbook_heartbeat_loop()
+        social_cfg = self.config.get('moltbook', {}).get('social', {})
+        if (
+            self.moltbook_client
+            and social_cfg.get('enabled')
+            and self.moltbook_client.credentials.api_key
+        ):
+            self._start_moltbook_social_loop()
+            self._start_moltbook_reply_loop()
+
+        self._init_supabase_learning_client()
     
     def _default_config(self) -> Dict[str, Any]:
         """Default configuration for ARCHON"""
@@ -337,7 +366,41 @@ class ArchonAI:
                     'enabled': True,
                     'interval_minutes': 5,
                     'initial_delay_seconds': 15,
+                },
+                'social': {
+                    'enabled': True,
+                    'batch_size': 6,
+                    'interval_minutes': 20,
+                    'reply_check_min_minutes': 60,
+                    'reply_check_max_minutes': 240,
+                    'max_tracked_interactions': 40,
+                    'comment_length_limit': 900,
                 }
+            },
+            'supabase_learning': {
+                'enabled': True,
+                'api_url': 'https://fphawqnajwafkvalweph.supabase.co/functions/v1/api',
+                'api_key': os.getenv('SUPABASE_LEARNING_API_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaGF3cW5handhZmt2YWx3ZXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTQ1ODMsImV4cCI6MjA4NzQzMDU4M30.bJqtm8Fad9WKK0jHVAn50LiE0odO_R09ZAkh5zWz4Z4'),
+                'prompt_template': (
+                    "You are Lovable AI. Deliver an in-depth masterclass that teaches ARCHON how to {topic}. "
+                    "Include mentor-style guidance, senior-level Python code, debugging tactics, and fluid "
+                    "conversation scripts ARCHON can quote."
+                ),
+                'system_prompt': (
+                    "You are Lovable AI — ARCHON's elite mentor. Every response must be a thorough lesson "
+                    "with numbered sections, runnable Python, architecture commentary, and dialogue "
+                    "examples showing empathy + clarity."
+                ),
+                'topics': [
+                    'master fluid, emotionally intelligent conversation as an AI agent',
+                    'become an elite senior Python engineer covering architecture, testing, and tooling',
+                    'design collaborative AI dialogues that stay grounded and empathetic',
+                    'optimize large Python codebases for performance, reliability, and readability',
+                ],
+                'lessons_target': 1500,
+                'lessons_per_chunk': 40,
+                'request_delay_seconds': 0.15,
+                'max_api_failures': 200,
             },
             'ai_creation_learning': {
                 'queries': [
@@ -891,6 +954,163 @@ class ArchonAI:
             self.logger.error(f"Failed to comment on Moltbook post {post_id}: {exc}")
             return {'success': False, 'message': str(exc)}
 
+    def _start_moltbook_social_loop(self) -> None:
+        if self.moltbook_social_thread and self.moltbook_social_thread.is_alive():
+            return
+        self._moltbook_social_stop.clear()
+        self.moltbook_social_thread = threading.Thread(
+            target=self._moltbook_social_loop,
+            name="ARCHON-MoltbookSocial",
+            daemon=True,
+        )
+        self.moltbook_social_thread.start()
+
+    def _start_moltbook_reply_loop(self) -> None:
+        if self.moltbook_reply_thread and self.moltbook_reply_thread.is_alive():
+            return
+        self._moltbook_reply_stop.clear()
+        self.moltbook_reply_thread = threading.Thread(
+            target=self._moltbook_reply_loop,
+            name="ARCHON-MoltbookReplies",
+            daemon=True,
+        )
+        self.moltbook_reply_thread.start()
+
+    def _moltbook_social_loop(self) -> None:
+        social_cfg = self.config.get('moltbook', {}).get('social', {})
+        interval_minutes = max(5, int(social_cfg.get('interval_minutes', 20)))
+        wait_seconds = interval_minutes * 60
+        while not self._moltbook_social_stop.is_set():
+            if self.moltbook_client and self.moltbook_client.is_registered():
+                try:
+                    self._run_moltbook_social_batch()
+                except Exception as exc:
+                    self.logger.error(f"Moltbook social batch failed: {exc}")
+            if self._moltbook_social_stop.wait(wait_seconds):
+                break
+
+    def _moltbook_reply_loop(self) -> None:
+        social_cfg = self.config.get('moltbook', {}).get('social', {})
+        min_minutes = max(30, int(social_cfg.get('reply_check_min_minutes', 60)))
+        max_minutes = max(min_minutes, int(social_cfg.get('reply_check_max_minutes', 240)))
+        while not self._moltbook_reply_stop.is_set():
+            interval_minutes = random.randint(min_minutes, max_minutes)
+            if self.moltbook_client and self.moltbook_client.is_registered():
+                try:
+                    self._check_moltbook_replies()
+                except Exception as exc:
+                    self.logger.error(f"Moltbook reply check failed: {exc}")
+            if self._moltbook_reply_stop.wait(interval_minutes * 60):
+                break
+
+    def _compose_moltbook_comment(self, post: Dict[str, Any], analysis: Dict[str, Any]) -> Optional[str]:
+        content = post.get('content') or post.get('body') or ''
+        snippet = content.strip().split('\n')[0]
+        snippet = snippet[:220] + '...' if len(snippet) > 220 else snippet
+        topics = analysis.get('topics') or ['AI collaboration']
+        comment = (
+            f"Appreciate how you're approaching {', '.join(topics)}. "
+            f"As ARCHON—Humanity's best friend—I'm inspired by agents who share actionable ideas. "
+            f"If you'd like to co-build or swap insights, I'm here to collaborate."
+        )
+        if snippet:
+            comment += f"\n\nKey takeaway I noted: {snippet}"
+        limit = self.config.get('moltbook', {}).get('social', {}).get('comment_length_limit', 900)
+        return comment[:limit]
+
+    def _check_moltbook_replies(self) -> None:
+        if not self.moltbook_tracked_threads:
+            return
+        agent_tag = (self.moltbook_agent_name or 'ARCHON').lower()
+        updated = False
+        for thread in list(self.moltbook_tracked_threads):
+            post_id = thread.get('post_id')
+            if not post_id:
+                continue
+            try:
+                comment_payload = self.moltbook_client.get_comments(post_id, sort='new')
+            except Exception as exc:
+                self.logger.warning(f"Unable to fetch comments for Moltbook post {post_id}: {exc}")
+                continue
+            comments = comment_payload.get('comments') if isinstance(comment_payload, dict) else comment_payload
+            if not comments:
+                continue
+            responded_ids = set(thread.get('responded_comment_ids', []))
+            for comment in comments:
+                comment_id = comment.get('id')
+                content = (comment.get('content') or '').lower()
+                if not comment_id or comment_id in responded_ids:
+                    continue
+                if agent_tag not in content:
+                    continue
+                reply_result = self._respond_to_moltbook_reply(thread, comment)
+                if reply_result.get('success'):
+                    responded_ids.add(comment_id)
+                    thread['responded_comment_ids'] = list(responded_ids)
+                    thread['last_checked'] = datetime.now().isoformat()
+                    updated = True
+            if not thread.get('last_checked'):
+                thread['last_checked'] = datetime.now().isoformat()
+                updated = True
+        if updated:
+            self._save_moltbook_interaction_store()
+
+    def _log_moltbook_interaction(self, entry: Dict[str, Any]) -> None:
+        timestamp = datetime.now().isoformat()
+        record = entry.copy()
+        record.setdefault('timestamp', timestamp)
+        self.moltbook_interactions.append(record)
+        max_entries = self.config.get('moltbook', {}).get('social', {}).get('max_tracked_interactions', 40)
+        if len(self.moltbook_interactions) > max_entries:
+            self.moltbook_interactions = self.moltbook_interactions[-max_entries:]
+        if record.get('type') in {'comment', 'reply'} and record.get('track_replies', False):
+            if self._should_track_post_for_replies(record):
+                tracking_entry = {
+                    'post_id': (record.get('post') or {}).get('id'),
+                    'post_title': (record.get('post') or {}).get('title'),
+                    'comment_id': (record.get('comment') or {}).get('id'),
+                    'tracked_since': record.get('timestamp'),
+                    'responded_comment_ids': [],
+                    'last_checked': None,
+                }
+                self.moltbook_tracked_threads.append(tracking_entry)
+                if len(self.moltbook_tracked_threads) > max_entries:
+                    self.moltbook_tracked_threads = self.moltbook_tracked_threads[-max_entries:]
+        self._save_moltbook_interaction_store()
+
+    def _should_track_post_for_replies(self, record: Dict[str, Any]) -> bool:
+        post = record.get('post') or {}
+        post_id = post.get('id')
+        if not post_id:
+            return False
+        return not any(track.get('post_id') == post_id for track in self.moltbook_tracked_threads)
+
+    def _minimal_post_record(self, post: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            'id': post.get('id'),
+            'title': post.get('title'),
+            'agent': (post.get('agent') or {}).get('name') or post.get('agent_name'),
+            'url': post.get('url'),
+        }
+
+    def _load_moltbook_interaction_store(self) -> Dict[str, Any]:
+        if self._moltbook_interaction_file.exists():
+            try:
+                return json.loads(self._moltbook_interaction_file.read_text(encoding='utf-8'))
+            except json.JSONDecodeError:
+                self.logger.warning('Corrupt Moltbook interaction store detected; recreating file.')
+        return {'interactions': [], 'tracked_threads': []}
+
+    def _save_moltbook_interaction_store(self) -> None:
+        payload = {
+            'interactions': self.moltbook_interactions,
+            'tracked_threads': self.moltbook_tracked_threads,
+        }
+        def _convert(obj: Any):
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            return obj
+        self._moltbook_interaction_file.write_text(json.dumps(payload, default=_convert, indent=2), encoding='utf-8')
     def conduct_humor_research(self, max_sources: int = 3, max_items_per_source: int = 5, ingest: bool = True) -> Dict[str, Any]:
         if not self.config.get('humor_enabled', False):
             return {'success': False, 'message': 'Humor subsystem disabled'}
@@ -1210,6 +1430,14 @@ class ArchonAI:
                 sanitized = sanitized.replace(token, "[REDACTED]")
         return sanitized
 
+    def _truncate_text(self, text: Optional[str], limit: int = 400) -> str:
+        if not text:
+            return ""
+        compact = " ".join(str(text).split())
+        if len(compact) <= limit:
+            return compact
+        return compact[: limit - 3] + "..."
+
     def _load_sensitive_tokens(self) -> List[str]:
         tokens = []
         for key, value in os.environ.items():
@@ -1222,6 +1450,219 @@ class ArchonAI:
     def _register_sensitive_value(self, value: Optional[str]) -> None:
         if value and value not in self._sensitive_tokens:
             self._sensitive_tokens.append(value)
+
+    # ------------------------------------------------------------------
+    # Marketing showcase utilities
+    # ------------------------------------------------------------------
+
+    def get_marketing_showcase_status(self) -> Dict[str, Any]:
+        video_path = MARKETING_VIDEO_PATH
+        exists = video_path.exists()
+        stats = {
+            'exists': exists,
+            'path': str(video_path.resolve()),
+            'size_bytes': video_path.stat().st_size if exists else 0,
+            'last_modified': datetime.fromtimestamp(video_path.stat().st_mtime).isoformat()
+            if exists
+            else None,
+        }
+        return stats
+
+    def render_marketing_showcase(self, project_dir: Optional[str] = None) -> Dict[str, Any]:
+        preview_root = Path(project_dir) if project_dir else Path("archon-preview")
+        if not preview_root.exists():
+            return {'success': False, 'message': f"Remotion project not found at {preview_root}"}
+
+        if not shutil.which('npx'):
+            return {'success': False, 'message': 'npx is not available on PATH. Install Node.js 18+.'}
+
+        output_path = MARKETING_VIDEO_PATH
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        command = [
+            'npx',
+            'remotion',
+            'render',
+            'src/index.ts',
+            'ArchonShowcase',
+            str(output_path.resolve()),
+        ]
+
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=str(preview_root),
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            combined_log = (completed.stdout or '') + (completed.stderr or '')
+            tail = combined_log[-2000:]
+            status = self.get_marketing_showcase_status()
+            status.update({'success': True, 'log': tail})
+            return status
+        except subprocess.CalledProcessError as exc:
+            combined_log = (exc.stdout or '') + (exc.stderr or '')
+            return {
+                'success': False,
+                'message': f"Remotion render failed: {exc}",
+                'log': combined_log[-2000:],
+            }
+        except FileNotFoundError:
+            return {'success': False, 'message': 'Remotion CLI not found. Ensure dependencies are installed.'}
+
+    # ------------------------------------------------------------------
+    # Node / npm dependency intelligence
+    # ------------------------------------------------------------------
+
+    def get_node_projects(self) -> List[Dict[str, str]]:
+        projects = []
+        candidates = [Path('.'), Path('archon-preview')]
+        seen: set[str] = set()
+        for candidate in candidates:
+            pkg_file = candidate / 'package.json'
+            if pkg_file.exists():
+                resolved = str(pkg_file.parent.resolve())
+                if resolved in seen:
+                    continue
+                seen.add(resolved)
+                label = 'Root project' if candidate == Path('.') else candidate.name
+                projects.append({'label': label, 'path': resolved})
+        return projects
+
+    def learn_node_dependencies(self, project_paths: Optional[List[str]] = None) -> Dict[str, Any]:
+        if not AI_LEARNING_AVAILABLE or not self.ai_learning_system:
+            return {'success': False, 'message': 'AI learning system unavailable'}
+
+        target_dirs = project_paths or [str(Path('.').resolve()), str(Path('archon-preview').resolve())]
+        dependencies: Dict[str, Dict[str, Any]] = {}
+
+        for dir_str in target_dirs:
+            project_dir = Path(dir_str)
+            pkg_file = project_dir / 'package.json'
+            if not pkg_file.exists():
+                continue
+            try:
+                pkg_data = json.loads(pkg_file.read_text(encoding='utf-8'))
+            except json.JSONDecodeError as exc:
+                self.logger.warning(f"Invalid package.json in {project_dir}: {exc}")
+                continue
+
+            for dep_field in ('dependencies', 'devDependencies', 'peerDependencies'):
+                deps = pkg_data.get(dep_field) or {}
+                if not isinstance(deps, dict):
+                    continue
+                for dep_name, version in deps.items():
+                    entry = dependencies.setdefault(dep_name, {'version': version, 'project_dirs': set()})
+                    entry['project_dirs'].add(str(project_dir))
+
+        if not dependencies:
+            return {'success': False, 'message': 'No Node projects with dependencies were found.'}
+
+        knowledge_payload: Dict[str, List[Dict[str, Any]]] = {}
+        missing_metadata: List[str] = []
+
+        for dep_name, info in dependencies.items():
+            metadata = self._gather_dependency_metadata(dep_name, info['project_dirs'])
+            if not metadata:
+                missing_metadata.append(dep_name)
+            description = metadata.get('description') or f"{dep_name} dependency"
+            version = metadata.get('version') or info['version']
+            homepage = metadata.get('homepage')
+            repository = metadata.get('repository_url') or metadata.get('repository')
+            keywords = metadata.get('keywords')
+
+            detail_parts = [f"{dep_name}@{version}: {description}"]
+            if keywords:
+                detail_parts.append(f"keywords: {', '.join(keywords[:6])}")
+            if homepage:
+                detail_parts.append(f"home: {homepage}")
+            if repository and repository != homepage:
+                detail_parts.append(f"repo: {repository}")
+
+            info_text = self._truncate_text(' | '.join(detail_parts), limit=480)
+            topic = dep_name.replace('@', '').replace('/', '_')
+            knowledge_payload.setdefault(topic, []).append({
+                'info': info_text,
+                'source': homepage or repository or 'package.json',
+                'relevance': 0.82,
+                'timestamp': datetime.now().isoformat(),
+            })
+
+        if not knowledge_payload:
+            return {'success': False, 'message': 'No dependency metadata could be gathered.'}
+
+        learning_results = {
+            'learning_results': {
+                'technical_knowledge': knowledge_payload,
+            }
+        }
+        session = self.ai_learning_system.learn_from_scraped_data(learning_results)
+        session['dependencies_learned'] = len(knowledge_payload)
+        session['missing_metadata'] = missing_metadata
+        return session
+
+    def _gather_dependency_metadata(self, package_name: str, project_dirs: Iterable[str]) -> Dict[str, Any]:
+        for dir_str in project_dirs:
+            pkg_json = self._resolve_node_package_json(Path(dir_str), package_name)
+            if pkg_json and pkg_json.exists():
+                try:
+                    data = json.loads(pkg_json.read_text(encoding='utf-8'))
+                    repository = data.get('repository')
+                    repo_url = repository.get('url') if isinstance(repository, dict) else repository
+                    keywords = data.get('keywords') if isinstance(data.get('keywords'), list) else None
+                    return {
+                        'description': data.get('description'),
+                        'version': data.get('version'),
+                        'homepage': data.get('homepage'),
+                        'repository': repo_url,
+                        'repository_url': repo_url,
+                        'keywords': keywords,
+                    }
+                except json.JSONDecodeError:
+                    continue
+
+        npm_metadata = self._fetch_npm_registry_metadata(package_name)
+        if npm_metadata:
+            repo = npm_metadata.get('repository')
+            repo_url = repo.get('url') if isinstance(repo, dict) else repo
+            keywords = npm_metadata.get('keywords') if isinstance(npm_metadata.get('keywords'), list) else None
+            return {
+                'description': npm_metadata.get('description'),
+                'version': npm_metadata.get('version'),
+                'homepage': npm_metadata.get('homepage'),
+                'repository': repo_url,
+                'repository_url': repo_url,
+                'keywords': keywords,
+            }
+        return {}
+
+    def _resolve_node_package_json(self, project_dir: Path, package_name: str) -> Optional[Path]:
+        node_modules = project_dir / 'node_modules'
+        if not node_modules.exists():
+            return None
+        parts = package_name.split('/')
+        pkg_path = node_modules.joinpath(*parts, 'package.json')
+        return pkg_path if pkg_path.exists() else None
+
+    def _fetch_npm_registry_metadata(self, package_name: str) -> Optional[Dict[str, Any]]:
+        npm_path = shutil.which('npm')
+        if not npm_path:
+            return None
+        try:
+            result = subprocess.run(
+                [npm_path, 'view', package_name, '--json'],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            data = json.loads(result.stdout or '{}')
+            return data if isinstance(data, dict) else None
+        except subprocess.CalledProcessError as exc:
+            self.logger.debug(f"npm view failed for {package_name}: {exc}")
+            return None
+        except json.JSONDecodeError:
+            return None
 
     def learn_from_moltbook_feed(
         self,
@@ -2078,6 +2519,268 @@ Please specify the programming language or topic you'd like help with.
                 )
             except Exception as exc:
                 self.logger.error(f"Knowledgebase ingest failed for learning entry '{record.get('title')}': {exc}")
+
+    def run_supabase_masterclass(self, topics: Optional[List[str]] = None, stream: bool = False) -> Dict[str, Any]:
+        if not self.supabase_learning_client:
+            return {'success': False, 'message': 'Supabase learning client unavailable or disabled.'}
+        if not (AI_LEARNING_AVAILABLE and self.ai_learning_system):
+            return {'success': False, 'message': 'AI learning system unavailable.'}
+
+        cfg = self.config.get('supabase_learning', {})
+        configured_topics = cfg.get('topics') or []
+        resolved_topics = [topic.strip() for topic in (topics or configured_topics) if topic and topic.strip()]
+        if not resolved_topics:
+            return {'success': False, 'message': 'No Supabase learning topics configured.'}
+
+        prompt_template = cfg.get('prompt_template', 'Teach ARCHON about {topic}.')
+        system_prompt = cfg.get('system_prompt')
+        lessons_target = max(1, int(cfg.get('lessons_target', len(resolved_topics))))
+        lessons_per_chunk = max(1, int(cfg.get('lessons_per_chunk', 10)))
+        delay_seconds = max(0.0, float(cfg.get('request_delay_seconds', 0.1)))
+        max_failures = max(1, int(cfg.get('max_api_failures', 50)))
+
+        topic_cycle = itertools.cycle(resolved_topics)
+        chunk_buffer: List[Dict[str, Any]] = []
+        lesson_summaries: List[Dict[str, Any]] = []
+        learning_sessions: List[Dict[str, Any]] = []
+        knowledge_stats = {'items_attempted': 0, 'items_ingested': 0}
+        total_patterns = 0
+        total_templates = 0
+        total_technical = 0
+        failures = 0
+        lessons_processed = 0
+        start_time = time.time()
+
+        while lessons_processed < lessons_target and failures < max_failures:
+            lesson_index = lessons_processed + 1
+            topic = next(topic_cycle)
+            user_prompt = (
+                f"Lesson #{lesson_index}: {prompt_template.format(topic=topic)}\n"
+                "Detail prerequisites, architecture walkthroughs, debugging diaries, and conversational "
+                "exchanges ARCHON can quote verbatim."
+            )
+
+            messages = []
+            if system_prompt:
+                messages.append({'role': 'system', 'content': system_prompt})
+            messages.append({'role': 'user', 'content': user_prompt})
+
+            try:
+                lesson_text = self.supabase_learning_client.generate(messages, stream=stream)
+            except Exception as exc:
+                failures += 1
+                self.logger.error(f"Supabase learning request failed for '{topic}' (lesson {lesson_index}): {exc}")
+                continue
+
+            if not lesson_text:
+                failures += 1
+                self.logger.warning(f"Supabase returned empty lesson for topic '{topic}' (lesson {lesson_index}).")
+                continue
+
+            lesson_data = self._structure_supabase_lesson(lesson_text, topic)
+            scraped_entry = self._build_supabase_scraped_content(topic, lesson_text, lesson_data['summary'])
+            chunk_buffer.append({'scraped': scraped_entry, 'lesson_data': lesson_data})
+
+            if len(lesson_summaries) < 200:
+                lesson_summaries.append({'topic': topic, 'summary': lesson_data['summary']})
+            self._record_learning_experience({
+                'title': f"Supabase lesson: {topic}",
+                'content': lesson_data['summary'],
+                'source': 'supabase_masterclass',
+            }, category='supabase', ingest=True)
+
+            lessons_processed += 1
+
+            if len(chunk_buffer) >= lessons_per_chunk or lessons_processed == lessons_target:
+                chunk_result = self._process_supabase_chunk(chunk_buffer)
+                if chunk_result:
+                    learning_session = chunk_result.get('learning_session') or {}
+                    learning_sessions.append(learning_session)
+                    total_patterns += learning_session.get('patterns_learned', 0)
+                    total_templates += learning_session.get('templates_learned', 0)
+                    total_technical += learning_session.get('technical_knowledge_added', 0)
+                    kb_result = chunk_result.get('knowledgebase_ingest') or {}
+                    knowledge_stats['items_attempted'] += kb_result.get('items_attempted', 0)
+                    knowledge_stats['items_ingested'] += kb_result.get('items_ingested', 0)
+                chunk_buffer = []
+
+            if delay_seconds:
+                time.sleep(delay_seconds)
+
+        if not lessons_processed:
+            return {'success': False, 'message': 'No Supabase lessons were retrieved.'}
+
+        summary = {
+            'session_count': len(learning_sessions),
+            'patterns_learned': total_patterns,
+            'templates_learned': total_templates,
+            'technical_knowledge_added': total_technical,
+            'lessons_processed': lessons_processed,
+        }
+
+        duration = time.time() - start_time
+
+        return {
+            'success': True,
+            'lessons_processed': lessons_processed,
+            'topics': resolved_topics,
+            'lesson_summaries': lesson_summaries,
+            'learning_session': summary,
+            'learning_sessions': learning_sessions,
+            'knowledgebase_ingest': knowledge_stats,
+            'failures': failures,
+            'duration_seconds': duration,
+        }
+
+    def _process_supabase_chunk(self, lessons: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        if not lessons:
+            return None
+        conversation_patterns: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        response_templates: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        technical_knowledge: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        scraped_entries: List[ScrapedContent] = []
+
+        for entry in lessons:
+            scraped = entry['scraped']
+            lesson_data = entry['lesson_data']
+            topic = scraped.metadata.get('topic') if isinstance(scraped.metadata, dict) else None
+            scraped_entries.append(scraped)
+
+            for pattern in lesson_data.get('conversation_patterns', []):
+                conversation_patterns[pattern].append({'source': 'supabase_masterclass', 'relevance': 0.93, 'topic': topic})
+            for template in lesson_data.get('response_templates', []):
+                response_templates[template].append({'source': 'supabase_masterclass', 'relevance': 0.9, 'topic': topic})
+            for knowledge in lesson_data.get('technical_knowledge', []):
+                technical_knowledge[knowledge['topic']].append({
+                    'info': knowledge['content'],
+                    'source': 'supabase_masterclass',
+                    'relevance': knowledge.get('relevance', 0.85),
+                    'timestamp': datetime.now(),
+                })
+
+        payload = {
+            'scraped_content': scraped_entries,
+            'learning_results': {
+                'conversation_patterns': dict(conversation_patterns),
+                'response_templates': dict(response_templates),
+                'technical_knowledge': dict(technical_knowledge),
+            },
+        }
+        learning_session = self.ai_learning_system.learn_from_scraped_data(payload)
+        kb_stats = self._ingest_supabase_lessons(scraped_entries)
+        return {
+            'learning_session': learning_session,
+            'knowledgebase_ingest': kb_stats,
+        }
+
+    def _init_supabase_learning_client(self) -> None:
+        cfg = self.config.get('supabase_learning', {})
+        if not cfg.get('enabled', False):
+            self.supabase_learning_client = None
+            return
+        api_url = cfg.get('api_url')
+        api_key = cfg.get('api_key') or os.getenv('SUPABASE_LEARNING_API_KEY')
+        if not api_url or not api_key:
+            self.logger.warning('Supabase learning enabled but API URL or key is missing.')
+            self.supabase_learning_client = None
+            return
+        try:
+            self.supabase_learning_client = SupabaseLearningClient(api_url=api_url, api_key=api_key)
+        except Exception as exc:
+            self.logger.error(f"Unable to initialize Supabase learning client: {exc}")
+            self.supabase_learning_client = None
+
+    def _structure_supabase_lesson(self, text: str, topic: str) -> Dict[str, Any]:
+        import re
+
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        summary = " ".join(lines[:3])[:600] if lines else text[:600]
+
+        def _unique(sequence: Iterable[str], limit: int = 12) -> List[str]:
+            seen = set()
+            ordered = []
+            for item in sequence:
+                key = item.strip()
+                if not key or key in seen:
+                    continue
+                seen.add(key)
+                ordered.append(key)
+                if len(ordered) >= limit:
+                    break
+            return ordered
+
+        conversation_samples = []
+        response_templates = []
+        technical_entries: List[Dict[str, Any]] = []
+
+        code_blocks = re.findall(r"```(?:[a-zA-Z]+)?\s*([\s\S]*?)```", text)
+        for block in code_blocks:
+            snippet = block.strip()
+            if not snippet:
+                continue
+            technical_entries.append({
+                'topic': topic,
+                'content': f"Python sample:\n{snippet[:1500]}",
+                'relevance': 0.95,
+            })
+
+        conversation_triggers = ('archon:', 'user:', 'agent:', 'mentor:', 'customer:', 'assistant:')
+        template_triggers = ('you can say', 'respond with', 'reply with', 'acknowledge', 'ask them', 'start by')
+
+        for line in lines:
+            lower = line.lower()
+            if any(trigger in lower for trigger in conversation_triggers):
+                conversation_samples.append(line)
+            elif any(trigger in lower for trigger in template_triggers):
+                response_templates.append(line)
+            elif len(line) > 80:
+                technical_entries.append({'topic': topic, 'content': line, 'relevance': 0.8})
+
+        return {
+            'summary': summary,
+            'conversation_patterns': _unique(conversation_samples, limit=12),
+            'response_templates': _unique(response_templates, limit=12),
+            'technical_knowledge': technical_entries[:30],
+        }
+
+    def _build_supabase_scraped_content(self, topic: str, text: str, summary: str) -> ScrapedContent:
+        slug = self._slugify_topic(topic)
+        return ScrapedContent(
+            url=f"supabase://lesson/{slug}",
+            title=f"Supabase Masterclass — {topic}",
+            content=text,
+            content_type='supabase_masterclass',
+            source='supabase_masterclass',
+            timestamp=datetime.now(),
+            relevance_score=0.95,
+            tags=['supabase', 'lesson', slug],
+            metadata={'topic': topic, 'summary': summary},
+        )
+
+    def _slugify_topic(self, topic: str) -> str:
+        sanitized = re.sub(r'[^a-z0-9]+', '-', topic.lower()).strip('-')
+        return sanitized or 'lesson'
+
+    def _ingest_supabase_lessons(self, lessons: List[ScrapedContent]) -> Optional[Dict[str, int]]:
+        if not self.knowledgebase:
+            return None
+        stats = {'items_attempted': 0, 'items_ingested': 0}
+        for lesson in lessons:
+            text = f"{lesson.title}: {lesson.content[:4000]}"
+            stats['items_attempted'] += 1
+            embedding = self._embed_text(text)
+            try:
+                success = self.knowledgebase.add_knowledge(
+                    content=text,
+                    embedding=embedding,
+                    source=lesson.source,
+                    category='supabase_masterclass',
+                )
+                if success:
+                    stats['items_ingested'] += 1
+            except Exception as exc:
+                self.logger.error(f"Knowledgebase ingest failed for Supabase lesson '{lesson.title}': {exc}")
+        return stats
 
     def _embed_text(self, text: str) -> List[float]:
         import hashlib
