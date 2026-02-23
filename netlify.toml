@@ -1,5 +1,5 @@
 [build]
-  command = "pip install --no-cache-dir -r requirements-netlify.txt"
+  command = "pip install --upgrade pip setuptools wheel && pip install --no-cache-dir -r requirements-netlify.txt"
 
 [build.environment]
   PIP_NO_CACHE_DIR = "1"
