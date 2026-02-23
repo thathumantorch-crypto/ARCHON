@@ -1,2 +1,5 @@
 # Local Netlify folder
 .netlify
+knowledge/**/*.json
+knowledge/corrupt_learning/
+knowledge/learning_data_*.json
